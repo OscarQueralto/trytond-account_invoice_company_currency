@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!-- The COPYRIGHT file at the top level of this repository contains the full
+     copyright notices and license terms. -->
+<data>
+    <xpath expr="/form/notebook/page[@id='invoice']/group/group/group[@id='amount']"
+            position="inside">
+        <label name="company_untaxed_amount" xalign="1.0" xexpand="1"/>
+        <field name="company_untaxed_amount" xalign="1.0" xexpand="0"/>
+        <label name="company_tax_amount" xalign="1.0" xexpand="1"/>
+        <field name="company_tax_amount" xalign="1.0" xexpand="0"/>
+        <label name="company_total_amount" xalign="1.0" xexpand="1"/>
+        <field name="company_total_amount" xalign="1.0" xexpand="0"/>
+    </xpath>
+</data>

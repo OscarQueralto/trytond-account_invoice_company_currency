@@ -1,0 +1,23 @@
+# 
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:account.invoice,company_currency_digits:"
+msgid "Company Currency Digits"
+msgstr "Dígits de moneda de l'empresa"
+
+msgctxt "field:account.invoice,company_tax_amount:"
+msgid "Tax (Company Currency)"
+msgstr "Impostos (Moneda empresa)"
+
+msgctxt "field:account.invoice,company_total_amount:"
+msgid "Total (Company Currency)"
+msgstr "Total (Moneda empresa)"
+
+msgctxt "field:account.invoice,company_untaxed_amount:"
+msgid "Untaxed (Company Currency)"
+msgstr "Base imposable (Moneda empresa)"
+
+msgctxt "field:account.invoice,different_currencies:"
+msgid "Different Currencies"
+msgstr "Monedes diferents"
