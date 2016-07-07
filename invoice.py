@@ -102,7 +102,7 @@ class Invoice:
     @classmethod
     def validate_invoice(cls, invoices):
         for invoice in invoices:
-            if invoice.type in ('in_invoice', 'in_credit_note'):
+            if invoice.type == 'in':
                 invoice._save_company_currency_amounts()
         super(Invoice, cls).validate_invoice(invoices)
 
