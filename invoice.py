@@ -5,7 +5,7 @@ from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
 
-__all__ = ['Invoice', 'InvoiceTax']
+__all__ = ['Invoice', 'InvoiceTax', 'InvoiceLine']
 __metaclass__ = PoolMeta
 
 
@@ -177,3 +177,21 @@ class InvoiceTax:
         default['company_base_cache'] = None
         default['company_amount_cache'] = None
         return super(InvoiceTax, cls).copy(invoice_taxes, default=default)
+
+class InvoiceLine():
+    __metaclass__ = PoolMeta
+    __name__ = 'account.invoice.line'
+
+    company_amount = fields.Function(
+        fields.Numeric('Amount (Company Currency)',
+            digits=(16, Eval('_parent_invoice', {}).get('currency_digits',
+                    Eval('currency_digits',2)))), 'get_company_amount')
+
+    def get_company_amount(self, name):
+        if self.invoice.currency == self.invoice.company.currency:
+            return self.amount
+        with Transaction().set_context(date=self.invoice.currency_date
+                or Date.today()):
+            return Currency.compute(self.invoice.currency,
+                    self.amount,
+                    self.invoice.company.currency, round=True)
