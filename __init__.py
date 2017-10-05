@@ -8,4 +8,5 @@ def register():
     Pool.register(
         Invoice,
         InvoiceTax,
+        InvoiceLine,
         module='account_invoice_company_currency', type_='model')
