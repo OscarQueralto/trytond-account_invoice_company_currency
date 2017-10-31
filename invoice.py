@@ -125,9 +125,8 @@ class Invoice:
 
 class InvoiceTax:
     __name__ = 'account.invoice.tax'
-    company_base_cache = fields.Numeric('Base (Company Currency)',
-        digits=(16, Eval('_parent_invoice',
-                {}).get('company_currency_digits', 2)), readonly=True)
+    company_currency_digits = fields.Function(fields.Integer('Currency Digits'),
+        'get_company_currency_digits')
     company_base = fields.Function(fields.Numeric('Base (Company Currency)',
             digits=(16, Eval('_parent_invoice',
                     {}).get('company_currency_digits', 2)),
@@ -136,9 +135,6 @@ class InvoiceTax:
                         {}).get('different_currencies', False),
                 }),
         'get_amount')
-    company_amount_cache = fields.Numeric('Amount (Company Currency)',
-        digits=(16, Eval('_parent_invoice',
-                {}).get('company_currency_digits', 2)), readonly=True)
     company_amount = fields.Function(
         fields.Numeric('Amount (Company Currency)',
             digits=(16, Eval('_parent_invoice',
@@ -146,8 +142,11 @@ class InvoiceTax:
             states={
                 'invisible': ~Eval('_parent_invoice',
                         {}).get('different_currencies', False),
-                }),
+                }, depends=['company_currency_digits']),
         'get_amount')
+
+    def get_company_currency_digits(self, name):
+        return self.invoice.company.currency.digits
 
     @classmethod
     def get_amount(cls, invoice_taxes, names):
@@ -157,37 +156,35 @@ class InvoiceTax:
         result = {}
         for invoice_tax in invoice_taxes:
             for fname in names:
-                if getattr(invoice_tax, '%s_cache' % fname):
-                    value = getattr(invoice_tax, '%s_cache' % fname)
-                else:
-                    with Transaction().set_context(
-                            date=invoice_tax.invoice.currency_date):
-                        value = Currency.compute(invoice_tax.invoice.currency,
-                            getattr(invoice_tax, fname[8:]),
-                            invoice_tax.invoice.company.currency, round=True)
+                with Transaction().set_context(
+                        date=invoice_tax.invoice.currency_date):
+                    value = Currency.compute(invoice_tax.invoice.currency,
+                        getattr(invoice_tax, fname[8:]),
+                        invoice_tax.invoice.company.currency, round=True)
                 result.setdefault(fname, {})[invoice_tax.id] = value
         return result
 
-    @classmethod
-    def copy(cls, invoice_taxes, default=None):
-        if default is None:
-            default = {}
-        else:
-            default = default.copy()
-        default['company_base_cache'] = None
-        default['company_amount_cache'] = None
-        return super(InvoiceTax, cls).copy(invoice_taxes, default=default)
 
 class InvoiceLine():
     __metaclass__ = PoolMeta
     __name__ = 'account.invoice.line'
 
+    company_currency_digits = fields.Function(fields.Integer('Currency Digits'),
+        'get_company_currency_digits')
     company_amount = fields.Function(
         fields.Numeric('Amount (Company Currency)',
-            digits=(16, Eval('_parent_invoice', {}).get('currency_digits',
-                    Eval('currency_digits',2)))), 'get_company_amount')
+            digits=(16, Eval('_parent_invoice', {}).get(
+                    'company_currency_digits',
+                    Eval('company_currency_digits',2))),
+            depends=['company_currency_digits']), 'get_company_amount')
+
+    def get_company_currency_digits(self, name):
+        return self.invoice.company.currency.digits
 
     def get_company_amount(self, name):
+        pool = Pool()
+        Date = pool.get('ir.date')
+        Currency = pool.get('currency.currency')
         if self.invoice.currency == self.invoice.company.currency:
             return self.amount
         with Transaction().set_context(date=self.invoice.currency_date

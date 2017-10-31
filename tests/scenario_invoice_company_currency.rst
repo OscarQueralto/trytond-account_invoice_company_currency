@@ -155,3 +155,15 @@ Create invoice with alternate currency::
     Decimal('20.00')
     >>> invoice.company_total_amount
     Decimal('230.00')
+    >>> tax, = invoice.taxes
+    >>> tax.base, tax.amount
+    (Decimal('400.00'), Decimal('40.00'))
+    >>> tax.company_base, tax.company_amount
+    (Decimal('200.00'), Decimal('20.00'))
+    >>> line1, line2 = invoice.lines
+    >>> line1.amount, line1.company_amount
+    (Decimal('400.00'), Decimal('200.00'))
+    >>> line1.amount, line1.company_amount
+    (Decimal('400.00'), Decimal('200.00'))
+    >>> line2.amount, line2.company_amount
+    (Decimal('20.00'), Decimal('10.00'))
