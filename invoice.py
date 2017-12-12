@@ -60,8 +60,8 @@ class Invoice:
 
     @fields.depends('company', 'currency')
     def on_change_with_different_currencies(self, name=None):
-        if self.company and self.company.currency and self.currency:
-            return self.company.currency.id != self.currency.id
+        if self.company:
+            return self.company.currency != self.currency
         return False
 
     @fields.depends('company')
@@ -125,7 +125,8 @@ class Invoice:
 
 class InvoiceTax:
     __name__ = 'account.invoice.tax'
-    company_currency_digits = fields.Function(fields.Integer('Currency Digits'),
+    company_currency_digits = fields.Function(
+        fields.Integer('Currency Digits'),
         'get_company_currency_digits')
     company_base = fields.Function(fields.Numeric('Base (Company Currency)',
             digits=(16, Eval('_parent_invoice',
@@ -169,13 +170,14 @@ class InvoiceLine():
     __metaclass__ = PoolMeta
     __name__ = 'account.invoice.line'
 
-    company_currency_digits = fields.Function(fields.Integer('Currency Digits'),
+    company_currency_digits = fields.Function(
+        fields.Integer('Currency Digits'),
         'get_company_currency_digits')
     company_amount = fields.Function(
         fields.Numeric('Amount (Company Currency)',
             digits=(16, Eval('_parent_invoice', {}).get(
                     'company_currency_digits',
-                    Eval('company_currency_digits',2))),
+                    Eval('company_currency_digits', 2))),
             depends=['company_currency_digits']), 'get_company_amount')
 
     def get_company_currency_digits(self, name):

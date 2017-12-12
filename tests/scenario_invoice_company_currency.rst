@@ -9,6 +9,7 @@ Imports::
     >>> from decimal import Decimal
     >>> from operator import attrgetter
     >>> from proteus import config, Model, Wizard
+    >>> from trytond.tests.tools import activate_modules
     >>> from trytond.modules.company.tests.tools import create_company, \
     ...     get_company
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
@@ -17,18 +18,9 @@ Imports::
     ...     set_fiscalyear_invoice_sequences, create_payment_term
     >>> today = datetime.date.today()
 
-Create database::
-
-    >>> config = config.set_trytond()
-    >>> config.pool.test = True
-
 Install account_invoice_company_currency::
 
-    >>> Module = Model.get('ir.module')
-    >>> module, = Module.find(
-    ...     [('name', '=', 'account_invoice_company_currency')])
-    >>> module.click('install')
-    >>> Wizard('ir.module.install_upgrade').execute('upgrade')
+    >>> config = activate_modules('account_invoice_company_currency')
 
 Create company::
 
@@ -37,8 +29,7 @@ Create company::
     >>> currencies = Currency.find([('code', '=', 'EUR')])
     >>> if not currencies:
     ...     eur = Currency(name='Euro', symbol=u'€', code='EUR',
-    ...         rounding=Decimal('0.01'), mon_grouping='[]',
-    ...         mon_decimal_point='.')
+    ...         rounding=Decimal('0.01'))
     ...     eur.save()
     ...     CurrencyRate(date=today + relativedelta(month=1, day=1),
     ...         rate=Decimal('2.0'), currency=eur).save()
@@ -85,20 +76,16 @@ Create product::
     >>> ProductUom = Model.get('product.uom')
     >>> unit, = ProductUom.find([('name', '=', 'Unit')])
     >>> ProductTemplate = Model.get('product.template')
-    >>> Product = Model.get('product.product')
-    >>> product = Product()
     >>> template = ProductTemplate()
     >>> template.name = 'product'
     >>> template.default_uom = unit
     >>> template.type = 'service'
     >>> template.list_price = Decimal('40')
-    >>> template.cost_price = Decimal('25')
     >>> template.account_expense = expense
     >>> template.account_revenue = revenue
     >>> template.customer_taxes.append(tax)
     >>> template.save()
-    >>> product.template = template
-    >>> product.save()
+    >>> product, = template.products
 
 Create payment term::
 
