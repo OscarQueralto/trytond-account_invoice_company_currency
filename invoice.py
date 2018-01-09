@@ -6,10 +6,10 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 
 __all__ = ['Invoice', 'InvoiceTax', 'InvoiceLine']
-__metaclass__ = PoolMeta
 
 
 class Invoice:
+    __metaclass__ = PoolMeta
     __name__ = 'account.invoice'
 
     different_currencies = fields.Function(
@@ -124,6 +124,7 @@ class Invoice:
 
 
 class InvoiceTax:
+    __metaclass__ = PoolMeta
     __name__ = 'account.invoice.tax'
     company_currency_digits = fields.Function(
         fields.Integer('Currency Digits'),
@@ -166,7 +167,7 @@ class InvoiceTax:
         return result
 
 
-class InvoiceLine():
+class InvoiceLine:
     __metaclass__ = PoolMeta
     __name__ = 'account.invoice.line'
 
