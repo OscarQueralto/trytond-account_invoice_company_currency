@@ -4,6 +4,7 @@ from trytond.pool import Pool
 from . import invoice
 
 
+
 def register():
     Pool.register(
         invoice.Invoice,

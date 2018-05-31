@@ -14,37 +14,62 @@ Imports::
     ...     get_company
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
     ...     create_chart, get_accounts, create_tax, set_tax_code
-    >>> from trytond.modules.account_invoice.tests.tools import \
-    ...     set_fiscalyear_invoice_sequences, create_payment_term
+    >>> from.trytond.modules.account_invoice.tests.tools import \
+    ...     set_fiscalyear_invoice_sequences
     >>> today = datetime.date.today()
 
 Install account_invoice_company_currency::
 
     >>> config = activate_modules('account_invoice_company_currency')
 
-Create company::
+Create currencies::
 
     >>> Currency = Model.get('currency.currency')
     >>> CurrencyRate = Model.get('currency.currency.rate')
+    >>> currencies = Currency.find([('code', '=', 'USD')])
+    >>> if not currencies:
+    ...     currency = Currency(name='US Dollar', symbol=u'$', code='USD',
+    ...         rounding=Decimal('0.01'), mon_grouping='[]',
+    ...         mon_decimal_point='.')
+    ...     currency.save()
+    ... else:
+    ...     currency, = currencies
+    >>> currencyrate = CurrencyRate()
+    >>> currencyrate.date = today + relativedelta(month=1, day=1)
+    >>> currencyrate.rate = Decimal('1.0')
+    >>> currencyrate.currency = currency
+    >>> currencyrate.save()
     >>> currencies = Currency.find([('code', '=', 'EUR')])
     >>> if not currencies:
     ...     eur = Currency(name='Euro', symbol=u'€', code='EUR',
     ...         rounding=Decimal('0.01'))
     ...     eur.save()
-    ...     CurrencyRate(date=today + relativedelta(month=1, day=1),
-    ...         rate=Decimal('2.0'), currency=eur).save()
     ... else:
     ...     eur, = currencies
+    >>> currencyrate2 = CurrencyRate()
+    >>> currencyrate2.date = today + relativedelta(month=1, day=1)
+    >>> currencyrate2.rate = Decimal('2.0')
+    >>> currencyrate2.currency = eur
+    >>> currencyrate2.save()
+
+Create company::
 
     >>> _ = create_company()
     >>> company = get_company()
+    >>> company.currency = currency
+    >>> company.save()
 
 Create fiscal year::
 
     >>> fiscalyear = set_fiscalyear_invoice_sequences(
     ...     create_fiscalyear(company))
     >>> fiscalyear.click('create_period')
-    >>> period = fiscalyear.periods[0]
+    >>> Period = Model.get('account.period')
+    >>> period, = Period.find([
+    ...   ('start_date', '>=', today.replace(day=1)),
+    ...   ('end_date', '<=', today.replace(day=1) + relativedelta(months=+1)),
+    ...   ], limit=1)
+
 
 Create chart of accounts::
 
@@ -54,12 +79,10 @@ Create chart of accounts::
     >>> revenue = accounts['revenue']
     >>> expense = accounts['expense']
     >>> account_tax = accounts['tax']
-    >>> account_cash = accounts['cash']
 
 Create tax::
 
     >>> tax = set_tax_code(create_tax(Decimal('.10')))
-    >>> tax.save()
     >>> invoice_base_code = tax.invoice_base_code
     >>> invoice_tax_code = tax.invoice_tax_code
     >>> credit_note_base_code = tax.credit_note_base_code
@@ -89,8 +112,74 @@ Create product::
 
 Create payment term::
 
-    >>> payment_term = create_payment_term()
+    >>> PaymentTerm = Model.get('account.invoice.payment_term')
+    >>> payment_term = PaymentTerm(name='Term')
+    >>> line = payment_term.lines.new(type='percent', percentage=Decimal(50))
+    >>> delta = line.relativedeltas.new(days=20)
+    >>> line = payment_term.lines.new(type='remainder')
+    >>> delta = line.relativedeltas.new(days=40)
     >>> payment_term.save()
+
+Create invoice with company currency::
+
+    >>> Invoice = Model.get('account.invoice')
+    >>> invoice = Invoice()
+    >>> invoice.party = party
+    >>> invoice.payment_term = payment_term
+    >>> invoice.currency = currency
+    >>> line = invoice.lines.new()
+    >>> line.product = product
+    >>> line.quantity = 5
+    >>> line.unit_price = Decimal('40.00')
+    >>> invoice.save()
+    >>> line1 = invoice.lines[0]
+    >>> line1.amount
+    Decimal('200.00')
+    >>> line1.company_amount
+    Decimal('200.00')
+    >>> line = invoice.lines.new()
+    >>> line.account = revenue
+    >>> line.description = 'Test'
+    >>> line.quantity = 1
+    >>> line.unit_price = Decimal('20.00')
+    >>> invoice.save()
+    >>> for line in invoice.lines:
+    ...     if line != line1:
+    ...         line2 = line
+    ...         break
+    >>> line2.amount
+    Decimal('20.00')
+    >>> line2.company_amount
+    Decimal('20.00')
+    >>> invoice.untaxed_amount
+    Decimal('220.00')
+    >>> invoice.tax_amount
+    Decimal('20.00')
+    >>> invoice.total_amount
+    Decimal('240.00')
+    >>> invoice.company_untaxed_amount
+    Decimal('220.00')
+    >>> invoice.company_tax_amount
+    Decimal('20.00')
+    >>> invoice.company_total_amount
+    Decimal('240.00')
+    >>> invoice.click('post')
+    >>> invoice.different_currencies
+    False
+    >>> invoice.state
+    u'posted'
+    >>> invoice.untaxed_amount
+    Decimal('220.00')
+    >>> invoice.tax_amount
+    Decimal('20.00')
+    >>> invoice.total_amount
+    Decimal('240.00')
+    >>> invoice.company_untaxed_amount
+    Decimal('220.00')
+    >>> invoice.company_tax_amount
+    Decimal('20.00')
+    >>> invoice.company_total_amount
+    Decimal('240.00')
 
 Create invoice with alternate currency::
 
@@ -102,55 +191,53 @@ Create invoice with alternate currency::
     >>> line = invoice.lines.new()
     >>> line.product = product
     >>> line.quantity = 5
-    >>> line.unit_price = Decimal('80')
+    >>> line.unit_price = Decimal('40.00')
+    >>> invoice.save()
+    >>> line1 = invoice.lines[0]
     >>> line.amount
-    Decimal('400.00')
+    Decimal('200.00')
+    >>> line1.company_amount
+    Decimal('100.00')
     >>> line = invoice.lines.new()
     >>> line.account = revenue
     >>> line.description = 'Test'
     >>> line.quantity = 1
     >>> line.unit_price = Decimal(20)
-    >>> line.amount
-    Decimal('20.00')
     >>> invoice.save()
-    >>> invoice.untaxed_amount
-    Decimal('420.00')
-    >>> invoice.tax_amount
-    Decimal('40.00')
-    >>> invoice.total_amount
-    Decimal('460.00')
-    >>> invoice.company_untaxed_amount
-    Decimal('210.00')
-    >>> invoice.company_tax_amount
+    >>> for line in invoice.lines:
+    ...     if line != line1:
+    ...         line2 = line
+    ...         break
+    >>> line2.amount
     Decimal('20.00')
+    >>> line2.company_amount
+    Decimal('10.00')
+    >>> invoice.untaxed_amount
+    Decimal('220.00')
+    >>> invoice.tax_amount
+    Decimal('20.00')
+    >>> invoice.total_amount
+    Decimal('240.00')
+    >>> invoice.company_untaxed_amount
+    Decimal('110.00')
+    >>> invoice.company_tax_amount
+    Decimal('10.00')
     >>> invoice.company_total_amount
-    Decimal('230.00')
+    Decimal('120.00')
     >>> invoice.click('post')
     >>> invoice.different_currencies
     True
     >>> invoice.state
     u'posted'
     >>> invoice.untaxed_amount
-    Decimal('420.00')
+    Decimal('220.00')
     >>> invoice.tax_amount
-    Decimal('40.00')
-    >>> invoice.total_amount
-    Decimal('460.00')
-    >>> invoice.company_untaxed_amount
-    Decimal('210.00')
-    >>> invoice.company_tax_amount
     Decimal('20.00')
+    >>> invoice.total_amount
+    Decimal('240.00')
+    >>> invoice.company_untaxed_amount
+    Decimal('110.00')
+    >>> invoice.company_tax_amount
+    Decimal('10.00')
     >>> invoice.company_total_amount
-    Decimal('230.00')
-    >>> tax, = invoice.taxes
-    >>> tax.base, tax.amount
-    (Decimal('400.00'), Decimal('40.00'))
-    >>> tax.company_base, tax.company_amount
-    (Decimal('200.00'), Decimal('20.00'))
-    >>> line1, line2 = invoice.lines
-    >>> line1.amount, line1.company_amount
-    (Decimal('400.00'), Decimal('200.00'))
-    >>> line1.amount, line1.company_amount
-    (Decimal('400.00'), Decimal('200.00'))
-    >>> line2.amount, line2.company_amount
-    (Decimal('20.00'), Decimal('10.00'))
+    Decimal('120.00')
