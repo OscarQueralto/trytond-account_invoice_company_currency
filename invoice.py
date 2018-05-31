@@ -101,26 +101,57 @@ class Invoice:
 
     @classmethod
     def validate_invoice(cls, invoices):
+        to_write = []
         for invoice in invoices:
             if invoice.type == 'in':
-                invoice._save_company_currency_amounts()
+                values = cls._save_company_currency_amounts(invoice)
+                to_write.extend(([invoice], values))
+        if to_write:
+            cls.write(*to_write)
         super(Invoice, cls).validate_invoice(invoices)
 
     @classmethod
     def post(cls, invoices):
+        to_write = []
         for invoice in invoices:
-            invoice._save_company_currency_amounts()
+            values = cls._save_company_currency_amounts(invoice)
+            to_write.extend(([invoice], values))
+        if to_write:
+            cls.write(*to_write)
         super(Invoice, cls).post(invoices)
 
-    def _save_company_currency_amounts(self):
+    @classmethod
+    def draft(cls, invoices):
+        to_write = [invoices, {
+                'company_untaxed_amount_cache': None,
+                'company_tax_amount_cache': None,
+                'company_total_amount_cache': None,
+                }]
+        cls.write(*to_write)
+        super(Invoice, cls).draft(invoices)
+
+    @classmethod
+    def copy(cls, invoices, default=None):
+        if default is None:
+            default = {}
+        default = default.copy()
+        default['company_untaxed_amount_cache'] = None
+        default['company_tax_amount_cache'] = None
+        default['company_total_amount_cache'] = None
+        return super(Invoice, cls).copy(invoices, default=default)
+
+    @classmethod
+    def _save_company_currency_amounts(cls, invoice):
         pool = Pool()
         Currency = pool.get('currency.currency')
-        with Transaction().set_context(date=self.currency_date):
+        with Transaction().set_context(date=invoice.currency_date):
+            values = {}
             for fname in ('untaxed_amount', 'tax_amount', 'total_amount'):
-                value = Currency.compute(self.currency, getattr(self, fname),
-                    self.company.currency, round=True)
-                setattr(self, 'company_%s_cache' % fname, value)
-        self.save()
+                value = Currency.compute(invoice.currency,
+                    getattr(invoice, fname), invoice.company.currency,
+                    round=True)
+                values['company_%s_cache' % fname] = value
+        return values
 
 
 class InvoiceTax:
