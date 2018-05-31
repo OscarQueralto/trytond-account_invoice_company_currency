@@ -8,14 +8,15 @@ from trytond.tests.test_tryton import doctest_teardown
 from trytond.tests.test_tryton import doctest_checker
 
 
-class TestCase(ModuleTestCase):
-    'Test module'
+class InvoiceCurrencyTestCase(ModuleTestCase):
+    'Test Invoice Currency module'
     module = 'account_invoice_company_currency'
 
 
 def suite():
     suite = trytond.tests.test_tryton.suite()
-    suite.addTests(unittest.TestLoader().loadTestsFromTestCase(TestCase))
+    suite.addTests(unittest.TestLoader().loadTestsFromTestCase(
+            InvoiceCurrencyTestCase))
     suite.addTests(doctest.DocFileSuite(
             'scenario_invoice_company_currency.rst',
             tearDown=doctest_teardown, encoding='utf-8',
