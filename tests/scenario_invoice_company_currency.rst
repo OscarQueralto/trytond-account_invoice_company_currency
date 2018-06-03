@@ -12,8 +12,9 @@ Imports::
     >>> from trytond.tests.tools import activate_modules
     >>> from trytond.modules.company.tests.tools import create_company, \
     ...     get_company
+    >>> from trytond.modules.currency.tests.tools import get_currency
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
-    ...     create_chart, get_accounts, create_tax, set_tax_code
+    ...     create_chart, get_accounts, create_tax, create_tax_code
     >>> from.trytond.modules.account_invoice.tests.tools import \
     ...     set_fiscalyear_invoice_sequences
     >>> today = datetime.date.today()
@@ -25,39 +26,13 @@ Install account_invoice_company_currency::
 Create currencies::
 
     >>> Currency = Model.get('currency.currency')
-    >>> CurrencyRate = Model.get('currency.currency.rate')
-    >>> currencies = Currency.find([('code', '=', 'USD')])
-    >>> if not currencies:
-    ...     currency = Currency(name='US Dollar', symbol=u'$', code='USD',
-    ...         rounding=Decimal('0.01'), mon_grouping='[]',
-    ...         mon_decimal_point='.')
-    ...     currency.save()
-    ... else:
-    ...     currency, = currencies
-    >>> currencyrate = CurrencyRate()
-    >>> currencyrate.date = today + relativedelta(month=1, day=1)
-    >>> currencyrate.rate = Decimal('1.0')
-    >>> currencyrate.currency = currency
-    >>> currencyrate.save()
-    >>> currencies = Currency.find([('code', '=', 'EUR')])
-    >>> if not currencies:
-    ...     eur = Currency(name='Euro', symbol=u'€', code='EUR',
-    ...         rounding=Decimal('0.01'))
-    ...     eur.save()
-    ... else:
-    ...     eur, = currencies
-    >>> currencyrate2 = CurrencyRate()
-    >>> currencyrate2.date = today + relativedelta(month=1, day=1)
-    >>> currencyrate2.rate = Decimal('2.0')
-    >>> currencyrate2.currency = eur
-    >>> currencyrate2.save()
+    >>> usd = get_currency(code='USD')
+    >>> eur = get_currency(code='EUR')
 
 Create company::
 
     >>> _ = create_company()
     >>> company = get_company()
-    >>> company.currency = currency
-    >>> company.save()
 
 Create fiscal year::
 
@@ -70,7 +45,6 @@ Create fiscal year::
     ...   ('end_date', '<=', today.replace(day=1) + relativedelta(months=+1)),
     ...   ], limit=1)
 
-
 Create chart of accounts::
 
     >>> _ = create_chart(company)
@@ -82,11 +56,17 @@ Create chart of accounts::
 
 Create tax::
 
-    >>> tax = set_tax_code(create_tax(Decimal('.10')))
-    >>> invoice_base_code = tax.invoice_base_code
-    >>> invoice_tax_code = tax.invoice_tax_code
-    >>> credit_note_base_code = tax.credit_note_base_code
-    >>> credit_note_tax_code = tax.credit_note_tax_code
+    >>> TaxCode = Model.get('account.tax.code')
+    >>> tax = create_tax(Decimal('.10'))
+    >>> tax.save()
+    >>> invoice_base_code = create_tax_code(tax, 'base', 'invoice')
+    >>> invoice_base_code.save()
+    >>> invoice_tax_code = create_tax_code(tax, 'tax', 'invoice')
+    >>> invoice_tax_code.save()
+    >>> credit_note_base_code = create_tax_code(tax, 'base', 'credit')
+    >>> credit_note_base_code.save()
+    >>> credit_note_tax_code = create_tax_code(tax, 'tax', 'credit')
+    >>> credit_note_tax_code.save()
 
 Create party::
 
@@ -114,8 +94,9 @@ Create payment term::
 
     >>> PaymentTerm = Model.get('account.invoice.payment_term')
     >>> payment_term = PaymentTerm(name='Term')
-    >>> line = payment_term.lines.new(type='percent', percentage=Decimal(50))
-    >>> delta = line.relativedeltas.new(days=20)
+    >>> line = payment_term.lines.new(type='percent', ratio=Decimal('.5'))
+    >>> delta, = line.relativedeltas
+    >>> delta.days = 20
     >>> line = payment_term.lines.new(type='remainder')
     >>> delta = line.relativedeltas.new(days=40)
     >>> payment_term.save()
@@ -126,7 +107,7 @@ Create invoice with company currency::
     >>> invoice = Invoice()
     >>> invoice.party = party
     >>> invoice.payment_term = payment_term
-    >>> invoice.currency = currency
+    >>> invoice.currency = usd
     >>> line = invoice.lines.new()
     >>> line.product = product
     >>> line.quantity = 5
