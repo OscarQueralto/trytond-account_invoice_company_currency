@@ -15,7 +15,7 @@ Imports::
     >>> from trytond.modules.currency.tests.tools import get_currency
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
     ...     create_chart, get_accounts, create_tax, create_tax_code
-    >>> from.trytond.modules.account_invoice.tests.tools import \
+    >>> from trytond.modules.account_invoice.tests.tools import \
     ...     set_fiscalyear_invoice_sequences
     >>> today = datetime.date.today()
 
