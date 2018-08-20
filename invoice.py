@@ -8,8 +8,7 @@ from trytond.transaction import Transaction
 __all__ = ['Invoice', 'InvoiceTax', 'InvoiceLine']
 
 
-class Invoice:
-    __metaclass__ = PoolMeta
+class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
 
     different_currencies = fields.Function(
@@ -94,7 +93,7 @@ class Invoice:
                                 result[fname[8:]][invoice.id],
                                 invoice.company.currency, round=True)
                     result.setdefault(fname, {})[invoice.id] = value
-        for key in result.keys():
+        for key in list(result.keys()):
             if key not in names:
                 del result[key]
         return result
@@ -154,8 +153,7 @@ class Invoice:
         return values
 
 
-class InvoiceTax:
-    __metaclass__ = PoolMeta
+class InvoiceTax(metaclass=PoolMeta):
     __name__ = 'account.invoice.tax'
     company_currency_digits = fields.Function(
         fields.Integer('Currency Digits'),
@@ -198,8 +196,7 @@ class InvoiceTax:
         return result
 
 
-class InvoiceLine:
-    __metaclass__ = PoolMeta
+class InvoiceLine(metaclass=PoolMeta):
     __name__ = 'account.invoice.line'
 
     company_currency_digits = fields.Function(

@@ -156,7 +156,7 @@ Create invoice with company currency::
     >>> invoice.different_currencies
     False
     >>> invoice.state
-    u'posted'
+    'posted'
     >>> invoice.untaxed_amount
     Decimal('220.00')
     >>> invoice.tax_amount
@@ -217,7 +217,7 @@ Create invoice with alternate currency::
     >>> invoice.different_currencies
     True
     >>> invoice.state
-    u'posted'
+    'posted'
     >>> invoice.untaxed_amount
     Decimal('220.00')
     >>> invoice.tax_amount
