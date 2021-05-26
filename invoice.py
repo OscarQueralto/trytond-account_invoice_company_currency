@@ -53,7 +53,7 @@ class Invoice(metaclass=PoolMeta):
         super(Invoice, cls).__setup__()
         extra_excludes = {'company_total_amount_cache',
             'company_tax_amount_cache', 'company_untaxed_amount_cache'}
-        cls._check_modify_exclude |= {'extra_excludes'}
+        cls._check_modify_exclude |= extra_excludes
 
     @fields.depends('company', 'currency')
     def on_change_with_different_currencies(self, name=None):
