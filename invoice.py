@@ -109,13 +109,14 @@ class Invoice(metaclass=PoolMeta):
 
     @classmethod
     def post(cls, invoices):
+        super(Invoice, cls).post(invoices)
+        # Save amounts after posting as their computation is faster
         to_write = []
         for invoice in invoices:
             values = cls._save_company_currency_amounts(invoice)
             to_write.extend(([invoice], values))
         if to_write:
             cls.write(*to_write)
-        super(Invoice, cls).post(invoices)
 
     @classmethod
     def draft(cls, invoices):
