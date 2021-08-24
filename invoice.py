@@ -4,6 +4,7 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
+from trytond.modules.currency.fields import Monetary
 
 __all__ = ['Invoice', 'InvoiceTax', 'InvoiceLine']
 
@@ -14,39 +15,28 @@ class Invoice(metaclass=PoolMeta):
     different_currencies = fields.Function(
         fields.Boolean('Different Currencies'),
         'on_change_with_different_currencies')
-    company_currency_digits = fields.Function(
-        fields.Integer('Company Currency Digits'),
-        'on_change_with_company_currency_digits')
-    company_untaxed_amount_cache = fields.Numeric('Untaxed (Company Currency)',
-        digits=(16, Eval('company_currency_digits', 2)), readonly=True,
-        depends=['company_currency_digits'])
-    company_untaxed_amount = fields.Function(
-        fields.Numeric('Untaxed (Company Currency)',
-            digits=(16, Eval('company_currency_digits', 2)), states={
-                'invisible': ~Eval('different_currencies', False),
-                },
-            depends=['different_currencies', 'company_currency_digits']),
-        'get_amount')
-    company_tax_amount_cache = fields.Numeric('Tax (Company Currency)',
-        digits=(16, Eval('company_currency_digits', 2)), readonly=True,
-        depends=['company_currency_digits'])
-    company_tax_amount = fields.Function(
-        fields.Numeric('Tax (Company Currency)',
-            digits=(16, Eval('company_currency_digits', 2)), states={
-                'invisible': ~Eval('different_currencies', False),
-                },
-            depends=['different_currencies', 'company_currency_digits']),
-        'get_amount')
-    company_total_amount_cache = fields.Numeric('Total (Company Currency)',
-        digits=(16, Eval('company_currency_digits', 2)), readonly=True,
-        depends=['company_currency_digits'])
-    company_total_amount = fields.Function(
-        fields.Numeric('Total (Company Currency)',
-            digits=(16, Eval('company_currency_digits', 2)), states={
-                'invisible': ~Eval('different_currencies', False),
-                },
-            depends=['different_currencies', 'company_currency_digits']),
-        'get_amount')
+    company_currency = fields.Function(
+        fields.Many2One('currency.currency', 'Company Currency'),
+        'on_change_with_company_currency')
+    company_untaxed_amount_cache = Monetary('Untaxed (Company Currency)',
+        digits='company_currency', currency='company_currency', readonly=True)
+    company_untaxed_amount = fields.Function(Monetary('Untaxed (Company Currency)',
+        digits='company_currency', currency='company_currency', states={
+            'invisible': ~Eval('different_currencies', False),
+        }, depends=['different_currencies']), 'get_amount')
+    company_tax_amount_cache = Monetary('Tax (Company Currency)',
+        digits='company_currency', currency='company_currency', readonly=True)
+    company_tax_amount = fields.Function(Monetary('Tax (Company Currency)',
+        digits='company_currency', currency='company_currency', states={
+            'invisible': ~Eval('different_currencies', False),
+        }, depends=['different_currencies']), 'get_amount')
+    company_total_amount_cache = Monetary('Total (Company Currency)',
+        digits='company_currency', currency='company_currency', readonly=True)
+    company_total_amount = fields.Function(Monetary('Total (Company Currency)',
+        digits='company_currency', currency='company_currency', states={
+            'invisible': ~Eval('different_currencies', False),
+            },
+        depends=['different_currencies']), 'get_amount')
 
     @classmethod
     def __setup__(cls):
@@ -62,10 +52,9 @@ class Invoice(metaclass=PoolMeta):
         return False
 
     @fields.depends('company')
-    def on_change_with_company_currency_digits(self, name=None):
+    def on_change_with_company_currency(self, name=None):
         if self.company and self.company.currency:
-            return self.company.currency.digits
-        return 2
+            return self.company.currency.id
 
     @classmethod
     def get_amount(cls, invoices, names):
@@ -154,29 +143,25 @@ class Invoice(metaclass=PoolMeta):
 
 class InvoiceTax(metaclass=PoolMeta):
     __name__ = 'account.invoice.tax'
-    company_currency_digits = fields.Function(
-        fields.Integer('Currency Digits'),
-        'get_company_currency_digits')
-    company_base = fields.Function(fields.Numeric('Base (Company Currency)',
-            digits=(16, Eval('_parent_invoice',
-                    {}).get('company_currency_digits', 2)),
-            states={
-                'invisible': ~Eval('_parent_invoice',
-                        {}).get('different_currencies', False),
-                }),
-        'get_amount')
-    company_amount = fields.Function(
-        fields.Numeric('Amount (Company Currency)',
-            digits=(16, Eval('_parent_invoice',
-                    {}).get('company_currency_digits', 2)),
-            states={
-                'invisible': ~Eval('_parent_invoice',
-                        {}).get('different_currencies', False),
-                }, depends=['company_currency_digits']),
-        'get_amount')
+    company_currency = fields.Function(fields.Many2One('currency.currency',
+        'Company Currency'), 'on_change_with_company_currency')
+    company_base = fields.Function(Monetary('Base (Company Currency)',
+        currency='company_currency', digits='company_currency',
+        states={
+            'invisible': ~Eval('_parent_invoice',
+                    {}).get('different_currencies', False),
+        }), 'get_amount')
+    company_amount = fields.Function(Monetary('Amount (Company Currency)',
+        currency='company_currency', digits='company_currency',
+        states={
+            'invisible': ~Eval('_parent_invoice',
+                    {}).get('different_currencies', False),
+        }), 'get_amount')
 
-    def get_company_currency_digits(self, name):
-        return self.invoice.company.currency.digits
+    @fields.depends('invoice', '_parent_invoice.company')
+    def on_change_with_company_currency(self, name=None):
+        if self.invoice and self.invoice.company.currency:
+            return self.invoice.company.currency.id
 
     @classmethod
     def get_amount(cls, invoice_taxes, names):
@@ -197,19 +182,17 @@ class InvoiceTax(metaclass=PoolMeta):
 
 class InvoiceLine(metaclass=PoolMeta):
     __name__ = 'account.invoice.line'
+    company_currency = fields.Function(
+        fields.Many2One('currency.currency', 'Company Currency'),
+        'on_change_with_company_currency')
+    company_amount = fields.Function(Monetary('Amount (Company Currency)',
+        digits='company_currency', currency='company_currency'),
+        'get_company_amount')
 
-    company_currency_digits = fields.Function(
-        fields.Integer('Currency Digits'),
-        'get_company_currency_digits')
-    company_amount = fields.Function(
-        fields.Numeric('Amount (Company Currency)',
-            digits=(16, Eval('_parent_invoice', {}).get(
-                    'company_currency_digits',
-                    Eval('company_currency_digits', 2))),
-            depends=['company_currency_digits']), 'get_company_amount')
-
-    def get_company_currency_digits(self, name):
-        return self.invoice.company.currency.digits
+    @fields.depends('invoice', '_parent_invoice.company')
+    def on_change_with_company_currency(self, name=None):
+        if self.invoice and self.invoice.company.currency:
+            return self.invoice.company.currency.id
 
     def get_company_amount(self, name):
         pool = Pool()
