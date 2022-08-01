@@ -164,11 +164,11 @@ Create invoice with company currency::
     >>> invoice.total_amount
     Decimal('240.00')
     >>> invoice.company_untaxed_amount
-    Decimal('220.00')
+    Decimal('220')
     >>> invoice.company_tax_amount
-    Decimal('20.00')
+    Decimal('20')
     >>> invoice.company_total_amount
-    Decimal('240.00')
+    Decimal('240')
 
 Create invoice with alternate currency::
 
@@ -225,8 +225,8 @@ Create invoice with alternate currency::
     >>> invoice.total_amount
     Decimal('240.00')
     >>> invoice.company_untaxed_amount
-    Decimal('110.00')
+    Decimal('110')
     >>> invoice.company_tax_amount
-    Decimal('10.00')
+    Decimal('10')
     >>> invoice.company_total_amount
-    Decimal('120.00')
+    Decimal('120')
