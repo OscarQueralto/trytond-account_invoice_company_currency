@@ -1,5 +1,7 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
+from decimal import Decimal
+
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
@@ -67,50 +69,59 @@ class Invoice(metaclass=PoolMeta):
             return self.company.currency.digits
         return 2
 
-    def get_company_quantities(self, fname=None):
+    def get_company_quantities(self, fname):
         cursor = Transaction().connection.cursor()
 
-        totals = {t:0 for t in [
-            'total_amount', 'untaxed_amount', 'tax_amount']}
+        totals = 0
+        if fname == 'total_amount':
+            if self.type == 'out':
+                values = ('aml.debit - aml.credit ', self.id)
+            else:
+                values = ('aml.credit - aml.debit ', self.id)
 
-        if self.type == 'out':
-            values = ('aml.debit - aml.credit ', 'aml.credit - aml.debit ',
-                'aml.credit - aml.debit ', self.id)
-        else:
-            values = ('aml.credit - aml.debit ', 'aml.debit - aml.credit ',
-                'aml.debit - aml.credit ', self.id)
+            query = ('SELECT ai.id, '
+                'CASE WHEN aml.account = ai.account '
+                    'THEN %s'
+                    'ELSE 0 '
+                    'END AS total_amount '
+                'FROM account_invoice AS ai '
+                    'JOIN account_move AS am ON ai.move = am.id '
+                    'JOIN account_move_line AS aml ON aml.move = am.id '
+                'WHERE ai.id =%s' % values)
 
-        query = ('SELECT ai.id, '
-            'CASE WHEN aml.account = ai.account '
-                'THEN %s'
-                'ELSE 0 '
-                'END AS total_amount,'
-            'CASE WHEN aml.account = ANY(ail.accounts) '
-                'THEN %s'
-                'ELSE 0 '
-                'END AS untaxed_amount, '
-            'CASE WHEN aml.account NOT IN (ai.account) AND '
-                'NOT (aml.account = ANY(ail.accounts)) '
-                'THEN %s'
-                'ELSE 0 '
-                'END AS tax_amount '
-            'FROM account_invoice AS ai '
-                'JOIN account_move AS am ON ai.move = am.id '
-                'JOIN account_move_line AS aml ON aml.move = am.id '
-                'JOIN (SELECT array_agg(account) AS accounts, invoice '
-                    'FROM account_invoice_line GROUP BY invoice) ail '
-                    'ON ail.invoice = ai.id '
-            'WHERE ai.id =%s' % values)
+        elif fname == 'untaxed_amount':
+            if self.type == 'out':
+                values = ('aml.credit - aml.debit ', self.id, self.id)
+            else:
+                values = ('aml.debit - aml.credit ', self.id, self.id)
 
-        cursor.execute(query)
+            query = ('SELECT ai.id, %s AS untaxed_amount '
+                'FROM account_invoice AS ai '
+                    'JOIN account_move AS am ON ai.move = am.id '
+                    'JOIN account_move_line AS aml ON aml.move = am.id '
+                'WHERE ai.id =%s AND aml.account IN ('
+                    'SELECT account '
+                    'FROM account_invoice_line WHERE invoice = %s)' % values)
 
-        for _, total_amount, untaxed_amount, tax_amount in cursor.fetchall():
-            totals['total_amount'] += total_amount
-            totals['untaxed_amount'] += untaxed_amount
-            totals['tax_amount'] += tax_amount
+        elif fname == 'tax_amount':
+            if self.type == 'out':
+                values = ('aml.credit - aml.debit ', self.id, self.id)
+            else:
+                values = ('aml.debit - aml.credit ', self.id, self.id)
 
-        if fname:
-            return totals[fname]
+            query = ('SELECT ai.id, %s AS tax_amount '
+                'FROM account_invoice AS ai '
+                    'JOIN account_move AS am ON ai.move = am.id '
+                    'JOIN account_move_line AS aml ON aml.move = am.id '
+                'WHERE ai.id =%s AND aml.account != ai.account AND '
+                'aml.account NOT IN (SELECT account '
+                    'FROM account_invoice_line WHERE invoice = %s)' % values)
+        if cursor:
+            cursor.execute(query)
+
+        for _, value in cursor.fetchall():
+            totals += Decimal(value)
+
         return totals
 
     @classmethod
