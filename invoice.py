@@ -109,7 +109,7 @@ class Invoice(metaclass=PoolMeta):
             cursor.execute(query)
 
         for _, value in cursor.fetchall():
-            totals += Decimal(value)
+            totals += self.currency.round(Decimal(value))
 
         return totals
 
