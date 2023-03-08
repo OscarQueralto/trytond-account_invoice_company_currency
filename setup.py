@@ -12,7 +12,7 @@ import io
 from configparser import ConfigParser
 
 MODULE = 'account_invoice_company_currency'
-PREFIX = 'trytonspain'
+PREFIX = 'nantic'
 MODULE2PREFIX = {}
 
 
@@ -73,9 +73,9 @@ setup(name='%s_%s' % (PREFIX, MODULE),
     version=version,
     description='',
     long_description=read('README'),
-    author='trytonspain',
+    author='nantic',
     url='http://www.nan-tic.com/',
-    download_url='https://github.com:trytonspain/trytond-account_invoice_company_currency',
+    download_url='https://github.com:nantic/trytond-account_invoice_company_currency',
     package_dir={'trytond.modules.%s' % MODULE: '.'},
     packages=[
         'trytond.modules.%s' % MODULE,
