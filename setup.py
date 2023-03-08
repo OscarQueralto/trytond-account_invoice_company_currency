@@ -75,7 +75,7 @@ setup(name='%s_%s' % (PREFIX, MODULE),
     long_description=read('README'),
     author='nantic',
     url='http://www.nan-tic.com/',
-    download_url='https://github.com:nantic/trytond-account_invoice_company_currency',
+    download_url="https://bitbucket.org/nantic/trytond-%s" % MODULE,
     package_dir={'trytond.modules.%s' % MODULE: '.'},
     packages=[
         'trytond.modules.%s' % MODULE,
