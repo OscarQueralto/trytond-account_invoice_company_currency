@@ -75,7 +75,7 @@ setup(name='%s_%s' % (PREFIX, MODULE),
     long_description=read('README'),
     author='trytonspain',
     url='http://www.nan-tic.com/',
-    download_url='https://github.com/NaN-tic/trytond-%s" % MODULE,
+    download_url='https://github.com/NaN-tic/trytond-%s' % MODULE,
     package_dir={'trytond.modules.%s' % MODULE: '.'},
     packages=[
         'trytond.modules.%s' % MODULE,
